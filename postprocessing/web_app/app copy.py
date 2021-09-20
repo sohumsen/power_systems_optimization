@@ -17,7 +17,6 @@ from optimization import TransitionModel
 import json
 # from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing
-import matplotlib.pyplot as plt
 
 import importlib
 
@@ -75,23 +74,22 @@ app.layout = html.Div([
             'margin': '10px'
         },),
     html.Pre(id="logs", children=[]),
-    dcc.Graph(id='region_fraction_chart', figure={}),
 
-    # dcc.Dropdown(id="place",
-    #              options=options_arr,
-    #              multi=False,
-    #              value="Dorset.csv",
-    #              style={'width': "40%"}
-    #              ),
-    # # html.Div(id='output_container', children=[]),
+    dcc.Dropdown(id="place",
+                 options=options_arr,
+                 multi=False,
+                 value="Dorset.csv",
+                 style={'width': "40%"}
+                 ),
+    # html.Div(id='output_container', children=[]),
 
-    # # html.Br(),
-    # html.Div(id='output-data-upload'),
+    # html.Br(),
+    html.Div(id='output-data-upload'),
 
 
-    # dcc.Graph(id='supplypv_ts', figure={}),
+    dcc.Graph(id='supplypv_ts', figure={}),
 
-    # dcc.Graph(id='demand_ts', figure={})
+    dcc.Graph(id='demand_ts', figure={})
 
 ])
 
@@ -130,8 +128,15 @@ def worker(q, list_of_contents, list_of_names):
     model = TransitionModel(df)
 
     model, results = model.optimize()
+    # df=pd.read_excel("./processing/input/b.xlsx",sheet_name=None)
+    # model=run_all(df)
 
+    # model.display()
+    # opt = SolverFactory("ipopt")
+    # results = opt.solve(model)
+    # return_dict[procnum]=[model,results]
     q.put([model, results])
+    # return results
 
 
 q = multiprocessing.Queue()
@@ -140,7 +145,6 @@ q = multiprocessing.Queue()
 @app.callback(
 
     Output(component_id="logs", component_property='children'),
-    Output(component_id='region_fraction_chart', component_property='figure'),
 
     [Input(component_id='upload-data', component_property='contents'),
      State('upload-data', 'filename')]
@@ -160,40 +164,66 @@ def run_optimization(list_of_contents, list_of_names):
         for v in results[0].component_data_objects(Var):
             model_dict[str(v)] = str(v.value)
         # return str(results[0])
-
-        region_list=list(set(el[0] for el in list(results[0].region_fraction.extract_values().keys())))
-        process_list=list(set(el[1] for el in list(results[0].region_fraction.extract_values().keys())))
-
-
-        lst1={}
-
-        for process in process_list:
-            
-            
-            lst=[]
-            for region in region_list:
-            
-                lst.append(results[0].region_fraction.extract_values()[(region, process)])
-            lst1[process]=lst
-
-        
-        df = pd.DataFrame(lst1, index=region_list)
-
-        ax = plt.subplot(111)
-        df.plot(kind='bar', stacked=True, label='Bar',ax=ax)
-        ax.set_xlabel("Region")
-        ax.set_title("Region Fraction")
-        ax.set_ylabel("Fraction")
-        ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), ncol=2, fancybox=True, shadow=True)
-        plt.legend(loc='center left',bbox_to_anchor=(1.0, 0.5))
-
-
-        # plt.show()
-        fig = ax.get_figure()
-        return json.dumps(model_dict, sort_keys=True, indent=4),fig
+        return json.dumps(model_dict, sort_keys=True, indent=4)
 
     else:
-        return "Please select a excel file to begin optimization",plt.subplot(111).get_figure()
+        return "Please select a excel file to begin optimization"
+
+@app.callback(
+    [Output(component_id='supplypv_ts', component_property='figure'), Output(
+        component_id='demand_ts', component_property='figure'),Output('output-data-upload', 'children')],
+    [Input(component_id='place', component_property='value'), Input(component_id='upload-data', component_property='contents'), State('upload-data', 'filename'),
+    ]
+)
+def update_graph(filename, list_of_contents, list_of_names):  # all the inputs
+
+
+    print("1")
+    df=pd.read_excel("./processing/input/b.xlsx",sheet_name=None)
+    model=run_all(df)
+    print("2",df)
+    model.display()
+    opt = SolverFactory("ipopt")
+    results = opt.solve(model,tee=True)
+
+
+    print("3")
+
+    print(results)
+    children=html.Div(id='fdsfs')
+    if list_of_contents is not None:
+        # children = [
+
+        #     parse_contents(c, n, d) for c, n, d in
+        #     zip(list_of_contents, list_of_names, list_of_dates)]
+        # df=parse_contents(list_of_contents, list_of_names)
+        print("1")
+        df=pd.read_excel("./processing/input/b.xlsx")
+        model=run_all(df)
+        print("2",df)
+        model.display()
+        opt = SolverFactory("ipopt")
+        results = opt.solve(model,tee=True)
+
+
+        print("3")
+
+        print(results)
+        children=dash_table.DataTable(
+            data=df.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in df.columns]
+        )
+
+    df_demand = pd.read_csv(
+        "preprocessing/raw_data/demand/local_demand_timeseries/"+filename, index_col=0)
+
+    fig_demand = px.area(df_demand, y="demand")
+    df_pvsupply = pd.read_csv(
+        "preprocessing/raw_data/supply/pv/final_output1.csv", index_col=0)
+    # x-axis formatter
+    fig_pvsupply = px.area(df_pvsupply, y=filename.replace(".csv", ""))
+
+    return fig_pvsupply, fig_demand ,children
 
 
 # ------------------------------------------------------------------------------
