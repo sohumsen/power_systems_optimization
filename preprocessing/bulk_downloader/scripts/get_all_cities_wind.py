@@ -148,8 +148,8 @@ def download_ftp_tree(ftp_handle, path, destination, pattern=None, overwrite=Fal
 if __name__ == "__main__":
     # Example usage mirroring all jpg files in an FTP directory tree.
     mysite = "ftp.ceda.ac.uk"
-    username = "jhumasadhukhan"
-    password = "Tushprajd5"
+    username = os.environ['CEDA_USERNAME']
+    password = os.environ['CEDA_PASSWORD']
     remote_dir = "/badc/ukmo-midas-open/data/uk-radiation-obs/dataset-version-202107/"
     local_dir = "C:/Sohum/Home/CodeHome/Python/optimization_course/energy_sytems_optimization/preprocessing/bulk_downloader/data/solar/"
     pattern = ".*\/qc-version-1\/.*(2015|2016|2017|2018|2019).csv"
