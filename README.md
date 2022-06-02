@@ -26,6 +26,7 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sohumsen/power_systems_optimization/master)
 
 
 
